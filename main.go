@@ -1,14 +1,22 @@
 package main
 
 import (
-	"fmt"
-	"github.com/mymmrac/telego"
-	th "github.com/mymmrac/telego/telegohandler"
-	tu "github.com/mymmrac/telego/telegoutil"
 	"log"
-	"os"
+	"superjugger88.go.swiftnews-bot/handlers"
+	"superjugger88.go.swiftnews-bot/models"
+
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"superjugger88.go.swiftnews-bot/util"
 )
+
+var inlineKeyboard = tgbotapi.InlineKeyboardMarkup{
+	InlineKeyboard: [][]tgbotapi.InlineKeyboardButton{
+		{
+			tgbotapi.NewInlineKeyboardButtonData("Фраза дня", "getPhrase"),
+			tgbotapi.NewInlineKeyboardButtonData("Заказать подарочек", "orderGift"),
+		},
+	},
+}
 
 func main() {
 	config, err := util.LoadConfig(".")
@@ -18,31 +26,27 @@ func main() {
 
 	botToken := config.TELEGRAM_APITOKEN
 
-	// Note: Please keep in mind that default logger may expose sensitive information,
-	// use in development only
-	bot, err := telego.NewBot(botToken, telego.WithDefaultDebugLogger())
+	bot, err := tgbotapi.NewBotAPI(botToken)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
-	// Get updates channel
-	// (more on configuration in examples/updates_long_polling/main.go)
-	updates, _ := bot.UpdatesViaLongPolling(nil)
+	bot.Debug = true
 
-	bh, _ := th.NewBotHandler(bot, updates)
+	log.Printf("Authorized on account %s", bot.Self.UserName)
 
-	bh.HandleMessage(func(bot *telego.Bot, message telego.Message) {
-		chatID := tu.ID(message.Chat.ID)
-		_, _ = bot.CopyMessage(
-			tu.CopyMessage(chatID, chatID, message.MessageID),
-		)
-	})
+	u := tgbotapi.NewUpdate(0)
+	u.Timeout = 60
 
-	defer bh.Stop()
+	updates := bot.GetUpdatesChan(u)
 
-	// Stop reviving updates from update channel
-	defer bot.StopLongPolling()
+	var user models.User
 
-	bh.Start()
+	for update := range updates {
+		if update.CallbackQuery != nil {
+			handlers.HandleCallbackQuery(bot, update.CallbackQuery)
+		} else if update.Message != nil {
+			handlers.HandleMessage(bot, update.Message, &user, inlineKeyboard)
+		}
+	}
 }
