@@ -2,11 +2,11 @@ package main
 
 import (
 	"log"
+	"os"
 	"superjugger88.go.swiftnews-bot/handlers"
 	"superjugger88.go.swiftnews-bot/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"superjugger88.go.swiftnews-bot/util"
 )
 
 var inlineKeyboard = tgbotapi.InlineKeyboardMarkup{
@@ -19,12 +19,7 @@ var inlineKeyboard = tgbotapi.InlineKeyboardMarkup{
 }
 
 func main() {
-	config, err := util.LoadConfig(".")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	botToken := config.TELEGRAM_APITOKEN
+	botToken := os.Getenv("TELEGRAM_APITOKEN")
 
 	bot, err := tgbotapi.NewBotAPI(botToken)
 	if err != nil {
